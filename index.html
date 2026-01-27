@@ -16,7 +16,9 @@
             <h1>Lector PDF & OCR</h1>
             <div class="controls">
                 <input type="file" id="btnAbrirPdf" accept="application/pdf" />
+                <button id="btnAnterior">Anterior</button>
                 <span id="txtPagina">0 / 0</span>
+                <button id="btnSiguiente">Siguiente</button>
                 <label class="switch-label">
                     <input type="checkbox" id="switchOscuro">
                     Modo Oscuro
@@ -25,7 +27,15 @@
         </header>
 
         <main>
-            <canvas id="pdf-canvas"></canvas>
+            <div class="canvas-wrapper">
+                <canvas id="pdf-canvas"></canvas>
+                <!-- Menú flotante (equivalente al ActionMode de Android) -->
+                <div id="menu-flotante" class="menu-oculto">
+                    <button id="btnCopiar">Copiar</button>
+                    <button id="btnTraducir">Traducir</button>
+                    <button id="btnEscuchar">Escuchar</button>
+                </div>
+            </div>
         </main>
     </div>
     <script src="script.js"></script>
