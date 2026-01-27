@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+        <title>MarcosVazques20 - Lector PDF</title>
+            <style>
+                    body { font-family: sans-serif; text-align: center; transition: 0.3s; }
+                            .dark-mode { background: #121212; color: white; }
+                                    #canvas-container { position: relative; display: inline-block; border: 1px solid #ccc; }
+                                            canvas { max-width: 100%; height: auto; }
+                                                    .controls { margin-top: 20px; padding: 10px; background: #eee; border-top: 1px solid #ddd; }
+                                                            .dark-mode .controls { background: #333; }
+                                                                </style>
+                                                                </head>
+                                                                <body>
+                                                                    <h2>Lector de PDF con OCR Japonés</h2>
+                                                                        
+                                                                            <div id="canvas-container">
+                                                                                    <canvas id="pdf-canvas"></canvas>
+                                                                                        </div>
+
+                                                                                            <div class="controls">
+                                                                                                    <input type="file" id="btnAbrirPdf" accept="application/pdf">
+                                                                                                            <button id="btnAnterior">Anterior</button>
+                                                                                                                    <span id="txtPagina">1 / 1</span>
+                                                                                                                            <button id="btnSiguiente">Siguiente</button>
+                                                                                                                                    <label>
+                                                                                                                                                <input type="checkbox" id="switchOscuro"> Modo Oscuro
+                                                                                                                                                        </label>
+                                                                                                                                                            </div>
+
+                                                                                                                                                                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+                                                                                                                                                                    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+                                                                                                                                                                        <script src="script.js"></script>
+                                                                                                                                                                        </body>
+                                                                                                                                                                        </html>
+                                                                                                                                                                        
