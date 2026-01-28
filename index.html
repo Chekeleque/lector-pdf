@@ -183,6 +183,8 @@
         const canvas = document.getElementById('pdf-canvas');
         const textLayer = document.getElementById('text-layer');
         const menu = document.getElementById('floating-menu');
+        const loadingEl = document.getElementById('loading');
+        const pageNumEl = document.getElementById('page-num');
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
@@ -196,13 +198,18 @@
                 menu.style.top = `${rect.top - 55 + window.scrollY}px`;
                 menu.style.left = `${Math.max(10, rect.left)}px`;
 
-                navigator.clipboard.writeText(text); // Copiado automático (MainActivity.kt)
             } else {
                 menu.style.display = 'none';
             }
         });
 
-        function copyText() { clearSelection(); }
+        function copyText() {
+            const text = window.getSelection().toString();
+            if (text) {
+                navigator.clipboard.writeText(text);
+            }
+            clearSelection();
+        }
         function listenText() {
             const msg = new SpeechSynthesisUtterance(window.getSelection().toString());
             msg.lang = 'ja-JP';
@@ -235,13 +242,13 @@
             const viewport = page.getViewport({ scale: 1.5 });
             canvas.height = viewport.height; canvas.width = viewport.width;
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-            document.getElementById('page-num').innerText = `${num} / ${pdfDoc.numPages}`;
+            pageNumEl.innerText = `${num} / ${pdfDoc.numPages}`;
             runOCR();
         }
 
 
         async function runOCR() {
-            document.getElementById('loading').style.display = 'block';
+            loadingEl.style.display = 'block';
             textLayer.innerHTML = '';
             const result = await Tesseract.recognize(canvas, 'jpn');
             result.data.lines.forEach(line => {
@@ -254,11 +261,11 @@
                 span.innerText = line.text;
                 textLayer.appendChild(span);
             });
-            document.getElementById('loading').style.display = 'none';
+            loadingEl.style.display = 'none';
         }
 
-        document.getElementById('prev').onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
-        document.getElementById('next').onclick = () => { if (pageNum < pdfDoc.numPages) renderPage(++pageNum); };
+        document.getElementById('prev').onclick = () => { if (pdfDoc && pageNum > 1) renderPage(--pageNum); };
+        document.getElementById('next').onclick = () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); };
         document.getElementById('dark-switch').onchange = e => {
             document.body.classList.toggle('dark-mode', e.target.checked);
             canvas.style.filter = e.target.checked ? "invert(1) hue-rotate(180deg)" : "none";
