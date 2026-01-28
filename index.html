@@ -4,7 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lector PDF OCR - Final</title>
+    <title>Lector PDF & OCR - MarcosVazques20</title>
+
+    <link rel="icon" href="https://img.icons8.com/color/48/000000/google-book-search.png" type="image/png">
+
     <style>
         :root {
             --primary: #6200EE;
@@ -20,11 +23,11 @@
         }
 
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
             color: var(--text);
             margin: 0;
-            padding-bottom: 100px;
+            padding-bottom: 110px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -32,24 +35,28 @@
             transition: 0.3s;
         }
 
+        /* AppBar estilo Android */
         .app-bar {
             width: 100%;
-            padding: 15px;
+            padding: 15px 0;
             text-align: center;
             background: var(--primary);
             color: white;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             position: sticky;
             top: 0;
             z-index: 1000;
+            font-size: 1.1rem;
         }
 
         #viewer-container {
             position: relative;
             margin: 15px auto;
             background: white;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
         }
 
         canvas {
@@ -58,7 +65,7 @@
             display: block;
         }
 
-        /* Capa de texto para selección móvil */
+        /* Capa de texto para selección táctil */
         #text-layer {
             position: absolute;
             top: 0;
@@ -83,28 +90,46 @@
             background: rgba(98, 0, 238, 0.4);
         }
 
-        /* Menú Flotante Estilo Android */
+        /* Menú Flotante Android ActionMode */
         #floating-menu {
             position: fixed;
             display: none;
             background: #323232;
             color: white;
-            padding: 5px;
+            padding: 6px;
             border-radius: 8px;
             z-index: 3000;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
             align-items: center;
+            animation: popIn 0.2s ease-out;
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         #floating-menu button {
             background: transparent;
             color: white;
             border: none;
-            padding: 10px;
+            padding: 10px 12px;
             font-size: 0.75rem;
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
+            border-right: 1px solid #555;
+        }
+
+        #floating-menu button:last-child {
+            border-right: none;
         }
 
         /* Controles Inferiores */
@@ -117,33 +142,43 @@
             display: flex;
             justify-content: space-around;
             align-items: center;
-            box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -3px 15px rgba(0, 0, 0, 0.15);
             z-index: 1000;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
         }
 
         .btn-fab {
             background: var(--primary);
             color: white;
             border: none;
-            width: 45px;
-            height: 45px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
             font-size: 1.2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            transition: 0.2s;
+        }
+
+        .btn-fab:active {
+            transform: scale(0.85);
+            background: #3700B3;
         }
 
         #loading {
             position: fixed;
-            top: 65px;
-            background: rgba(0, 0, 0, 0.8);
+            top: 75px;
+            background: rgba(0, 0, 0, 0.85);
             color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
+            padding: 8px 20px;
+            border-radius: 25px;
             display: none;
             z-index: 2000;
+            font-size: 0.85rem;
+            border: 1px solid var(--primary);
         }
     </style>
 </head>
@@ -151,12 +186,12 @@
 <body>
 
     <div class="app-bar">Lector PDF & OCR</div>
-    <div id="loading">Detectando japonés...</div>
+    <div id="loading">Detección de texto activa...</div>
 
     <div id="floating-menu">
         <button onclick="copyText()">Copiar</button>
         <button onclick="listenText()">Escuchar</button>
-        <button onclick="translateDeepL()">DeepL</button>
+        <button onclick="shareDeepL()">DeepL</button>
         <button onclick="searchGoogle()">Buscar</button>
     </div>
 
@@ -169,11 +204,15 @@
         <input type="file" id="file-input" accept="application/pdf" style="display:none">
         <button class="btn-fab" onclick="document.getElementById('file-input').click()">📁</button>
         <button class="btn-fab" id="prev">◀</button>
-        <span id="page-num" style="font-weight:bold">0 / 0</span>
+        <span id="page-num" style="font-weight:bold; min-width: 40px; text-align: center;">0 / 0</span>
         <button class="btn-fab" id="next">▶</button>
-        <button class="btn-fab" onclick="clearSelection()" style="background:#757575">🧹</button>
-        <input type="checkbox" id="dark-switch">
+        <button class="btn-fab" onclick="clearSelection()" style="background:#607D8B">🧹</button>
+        <div style="text-align:center">
+            <input type="checkbox" id="dark-switch">
+            <div style="font-size: 0.6rem; font-weight: bold; margin-top: 2px;">MODO</div>
+        </div>
     </div>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
@@ -183,49 +222,43 @@
         const canvas = document.getElementById('pdf-canvas');
         const textLayer = document.getElementById('text-layer');
         const menu = document.getElementById('floating-menu');
-        const loadingEl = document.getElementById('loading');
-        const pageNumEl = document.getElementById('page-num');
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // --- LÓGICA DE SELECCIÓN Y MENÚ ---
+        // --- MANEJO DE SELECCIÓN ---
         document.addEventListener('selectionchange', () => {
             const selection = window.getSelection();
             const text = selection.toString().trim();
             if (text.length > 0) {
-                const rect = selection.getRangeAt(0).getBoundingClientRect();
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
                 menu.style.display = 'flex';
-                menu.style.top = `${rect.top - 55 + window.scrollY}px`;
+                menu.style.top = `${rect.top - 60 + window.scrollY}px`;
                 menu.style.left = `${Math.max(10, rect.left)}px`;
-
+                navigator.clipboard.writeText(text); // Copiado automático (MainActivity.kt)
             } else {
                 menu.style.display = 'none';
             }
         });
 
-        function copyText() {
-            const text = window.getSelection().toString();
-            if (text) {
-                navigator.clipboard.writeText(text);
-            }
-            clearSelection();
-        }
+        // --- ACCIONES DEL MENÚ ---
+        function copyText() { clearSelection(); }
         function listenText() {
             const msg = new SpeechSynthesisUtterance(window.getSelection().toString());
-            msg.lang = 'ja-JP';
-            window.speechSynthesis.speak(msg);
+            msg.lang = 'ja-JP'; window.speechSynthesis.speak(msg);
         }
-        function translateDeepL() {
+        function shareDeepL() {
             const text = window.getSelection().toString();
             window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(text)}`, '_blank');
         }
         function searchGoogle() {
             const text = window.getSelection().toString();
+
             window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, '_blank');
         }
         function clearSelection() { window.getSelection().removeAllRanges(); menu.style.display = 'none'; }
 
-        // --- LÓGICA DE PDF Y OCR ---
+        // --- PROCESAMIENTO PDF/OCR ---
         document.getElementById('file-input').onchange = e => {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -242,13 +275,12 @@
             const viewport = page.getViewport({ scale: 1.5 });
             canvas.height = viewport.height; canvas.width = viewport.width;
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-            pageNumEl.innerText = `${num} / ${pdfDoc.numPages}`;
+            document.getElementById('page-num').innerText = `${num} / ${pdfDoc.numPages}`;
             runOCR();
         }
 
-
         async function runOCR() {
-            loadingEl.style.display = 'block';
+            document.getElementById('loading').style.display = 'block';
             textLayer.innerHTML = '';
             const result = await Tesseract.recognize(canvas, 'jpn');
             result.data.lines.forEach(line => {
@@ -261,11 +293,12 @@
                 span.innerText = line.text;
                 textLayer.appendChild(span);
             });
-            loadingEl.style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
         }
 
-        document.getElementById('prev').onclick = () => { if (pdfDoc && pageNum > 1) renderPage(--pageNum); };
-        document.getElementById('next').onclick = () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); };
+        // --- NAVEGACIÓN ---
+        document.getElementById('prev').onclick = () => { if (pageNum > 1) renderPage(--pageNum); };
+        document.getElementById('next').onclick = () => { if (pageNum < pdfDoc.numPages) renderPage(++pageNum); };
         document.getElementById('dark-switch').onchange = e => {
             document.body.classList.toggle('dark-mode', e.target.checked);
             canvas.style.filter = e.target.checked ? "invert(1) hue-rotate(180deg)" : "none";
@@ -274,4 +307,3 @@
 </body>
 
 </html>
-}
