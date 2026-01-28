@@ -145,6 +145,8 @@ function translateDeepL() {
         // Usar ja/es específicamente ya que el OCR es para japonés
         window.open(`https://www.deepl.com/translator#ja/es/${encodeURIComponent(text)}`, '_blank');
     }
+    window.getSelection().removeAllRanges();
+    menu.style.display = 'none';
 }
 
 function googleSearch() {
@@ -152,15 +154,21 @@ function googleSearch() {
     if (text) {
         window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, '_blank');
     }
+    window.getSelection().removeAllRanges();
+    menu.style.display = 'none';
 }
 
 function speakJapanese() {
     const text = getSelectedText();
     if (text) {
+        // Cancelar cualquier voz anterior para evitar solapamientos
+        window.speechSynthesis.cancel();
         const msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'ja-JP';
         window.speechSynthesis.speak(msg);
     }
+    // No ocultamos el menú para permitir que el usuario vuelva a hacer clic.
+    // Se ocultará cuando la selección de texto desaparezca.
 }
 
 // --- Configuración de Event Listeners ---
@@ -193,15 +201,24 @@ document.addEventListener('selectionchange', () => {
             menu.style.display = 'flex';
 
             // Posicionar el menú arriba, pero cambiarlo abajo si no hay espacio
-            if (rect.top < menuHeight) {
+            if (rect.top < menuHeight + 10) { // Añadir un poco de margen
                 menu.style.top = `${rect.bottom + 10}px`;
             } else {
                 menu.style.top = `${rect.top - menuHeight}px`;
             }
 
             // Centrar el menú horizontalmente sobre la selección
-            const menuLeft = rect.left + (rect.width / 2) - (menu.offsetWidth / 2);
-            menu.style.left = `${Math.max(10, menuLeft)}px`; // Evitar que se salga por la izquierda
+            const menuWidth = menu.offsetWidth;
+            const viewportWidth = document.documentElement.clientWidth;
+            let menuLeft = rect.left + (rect.width / 2) - (menuWidth / 2);
+
+            // Evitar que se salga por la izquierda
+            menuLeft = Math.max(10, menuLeft);
+            // Evitar que se salga por la derecha
+            if (menuLeft + menuWidth + 10 > viewportWidth) {
+                menuLeft = viewportWidth - menuWidth - 10;
+            }
+            menu.style.left = `${menuLeft}px`;
         }
     } else {
         menu.style.display = 'none';
