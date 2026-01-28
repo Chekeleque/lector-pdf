@@ -5,166 +5,238 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lector Lens & Kindle</title>
-    <link rel="icon" href="https://img.icons8.com/color/48/google-lens.png">
     <style>
         :root {
             --primary: #6200EE;
-            --bg: #ffffff;
-            --text: #202124;
-            --surface: #f1f3f4;
-        }
-
-        .dark-mode {
-            --bg: #121212;
-            --text: #e8eaed;
-            --surface: #2d2e31;
+            --bg: #202124;
         }
 
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: sans-serif;
             background: var(--bg);
-            color: var(--text);
             margin: 0;
-            overflow: hidden;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Línea de progreso Lens minimalista en el tope */
+        /* Indicador de carga Lens */
         #ocr-bar {
             position: fixed;
             top: 0;
             left: 0;
             width: 0%;
-            height: 3px;
+            height: 4px;
             background: #4285F4;
             z-index: 2000;
-            transition: width 0.2s;
+            transition: width 0.3s;
         }
 
-        /* Contenedor de lectura con altura garantizada */
-        #reader-viewport {
+        /* Contenedor principal */
+        #viewport {
             flex: 1;
-            overflow-y: auto;
+            overflow: auto;
             display: flex;
             justify-content: center;
-            padding: 10px 0;
-            background: #525659;
-            /* Fondo gris tipo lector PDF */
+            align-items: flex-start;
+            padding: 20px;
         }
 
-        #pdf-wrapper {
+        /* Contenedor del PDF - IMPORTANTE: Dimensiones mínimas */
+        #pdf-container {
             position: relative;
             background: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            min-height: 100px;
-            min-width: 100px;
+            min-width: 300px;
+            min-height: 400px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
         }
 
         canvas {
-            display: block;
-            max-width: 100vw;
+            width: 100%;
             height: auto;
+            display: block;
         }
 
-        /* Capa Lens */
+        /* Capa de selección táctil (Lens) */
         #lens-layer {
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
+            width: 100%;
+            height: 100%;
             z-index: 10;
         }
 
-        .ocr-block {
+        .ocr-zone {
             position: absolute;
             color: transparent;
             pointer-events: all;
             user-select: text;
             -webkit-user-select: text;
+            /* Opcional: Borde para depuración, bórralo si quieres que sea invisible */
+            outline: 1px rgba(66, 133, 244, 0.2) solid;
         }
 
-        .ocr-block::selection {
-            background: rgba(66, 133, 244, 0.3);
+        .ocr-zone::selection {
+            background: rgba(66, 133, 244, 0.4);
         }
 
-        /* Menú Lens */
-        .lens-menu {
+        /* Menú Flotante */
+        #floating-menu {
             position: fixed;
             display: none;
             background: #3c4043;
             color: white;
-            padding: 5px 10px;
-            border-radius: 25px;
+            padding: 10px 15px;
+            border-radius: 20px;
             z-index: 3000;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
             gap: 15px;
-            align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
         }
 
-        .lens-menu button {
-            background: transparent;
-            color: white;
+        #floating-menu button {
+            background: none;
             border: none;
-            font-size: 0.9rem;
+            color: white;
             font-weight: bold;
+            cursor: pointer;
         }
 
-        /* Barra Inferior */
-        .bottom-nav {
+        /* Navegación Kindle */
+        .nav-bar {
             height: 60px;
-            background: var(--surface);
+            background: #f1f3f4;
             display: flex;
             justify-content: space-around;
             align-items: center;
-            border-top: 1px solid #ccc;
         }
 
-        .nav-btn {
+        .btn {
+            font-size: 1.5rem;
             background: none;
             border: none;
-            font-size: 1.5rem;
-            color: var(--text);
+            cursor: pointer;
             padding: 10px;
         }
     </style>
 </head>
 
-<body>
+<body></body>
 
-    <div id="ocr-bar"></div>
+<div id="ocr-bar"></div>
 
-    <!-- Menú de acción contextual para el texto OCR -->
-    <div id="lens-action-menu" class="lens-menu">
-        <button id="btn-copy">Copiar</button>
-        <button id="btn-translate">DeepL</button>
-        <button id="btn-speak">Voz</button>
-        <button id="btn-search">Buscar</button>
+<div id="floating-menu">
+    <button onclick="copyT()">Copiar</button>
+    <button onclick="transT()">DeepL</button>
+    <button onclick="speakT()">Voz</button>
+</div>
+
+<div id="viewport">
+    <div id="pdf-container">
+        <canvas id="pdf-render"></canvas>
+        <div id="lens-layer"></div>
     </div>
+</div>
 
-    <div id="reader-viewport">
-        <div id="pdf-wrapper">
-            <canvas id="main-canvas"></canvas>
-            <div id="lens-layer"></div>
-        </div>
-    </div>
+<div class="nav-bar">
+    <button class="btn" onclick="movePage(-1)">‹</button>
+    <span id="page-label" style="font-weight: bold;">Página: 0 / 0</span>
+    <button class="btn" onclick="movePage(1)">›</button>
+    <button class="btn" onclick="document.getElementById('file-selector').click()">📁</button>
+    <input type="file" id="file-selector" style="display:none" accept="application/pdf">
+</div>
 
-    <!-- Barra de navegación inferior -->
-    <div class="bottom-nav">
-        <button id="btn-prev" class="nav-btn">‹</button>
-        <span id="page-info" style="font-weight: bold;">0 / 0</span>
-        <button id="btn-next" class="nav-btn">›</button>
-        <button id="btn-open" class="nav-btn">📁</button>
-        <input type="file" id="pdf-upload" style="display:none" accept="application/pdf">
-        <button id="btn-dark-toggle" class="nav-btn">🌓</button>
-    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
-    <script src="script.js" defer></script>
+<script>
+    let pdfDoc = null, pageNum = 1, rendering = false;
+    const canvas = document.getElementById('pdf-render');
+    const lens = document.getElementById('lens-layer');
+    const bar = document.getElementById('ocr-bar');
+    const menu = document.getElementById('floating-menu');
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    // Gestión de menú flotante
+    document.addEventListener('selectionchange', () => {
+        const s = window.getSelection();
+        if (s.toString().trim()) {
+            const r = s.getRangeAt(0).getBoundingClientRect();
+            menu.style.display = 'flex';
+            menu.style.top = `${r.top - 55}px`;
+            menu.style.left = `${Math.max(10, r.left)}px`;
+        } else { menu.style.display = 'none'; }
+    });
+
+    // Cargar PDF
+    document.getElementById('file-selector').onchange = e => {
+        const f = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function () {
+            const typedarray = new Uint8Array(this.result);
+            pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                pdfDoc = pdf;
+                render(1);
+            });
+        };
+        reader.readAsArrayBuffer(f);
+    };
+
+    async function render(num) {
+        if (rendering) return;
+        rendering = true;
+        pageNum = num;
+
+        const page = await pdfDoc.getPage(num);
+        const vp = page.getViewport({ scale: 1.5 }); // Escala balanceada
+
+        canvas.height = vp.height;
+        canvas.width = vp.width;
+
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        document.getElementById('page-label').innerText = `Página: ${num} / ${pdfDoc.numPages}`;
+
+        rendering = false;
+        startOCR();
+    }
+
+    async function startOCR() {
+        lens.innerHTML = '';
+        bar.style.width = '10%';
+
+        const res = await Tesseract.recognize(canvas, 'jpn', {
+            logger: m => { if (m.status === 'recognizing text') bar.style.width = `${10 + (m.progress * 90)}%`; }
+        });
+
+        res.data.lines.forEach(l => {
+            const s = document.createElement('span');
+            s.className = 'ocr-zone';
+            const b = l.bbox;
+            s.style.left = `${b.x0}px`;
+            s.style.top = `${b.y0}px`;
+            s.style.width = `${b.x1 - b.x0}px`;
+            s.style.height = `${b.y1 - b.y0}px`;
+            s.style.fontSize = `${b.y1 - b.y0}px`;
+            s.innerText = l.text;
+            lens.appendChild(s);
+        });
+        bar.style.width = '0%';
+    }
+
+    function movePage(d) {
+        const n = pageNum + d;
+        if (n > 0 && n <= pdfDoc.numPages) render(n);
+    }
+
+    // Acciones
+    function copyT() { navigator.clipboard.writeText(window.getSelection().toString()); }
+    function transT() { window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(window.getSelection().toString())}`, '_blank'); }
+    function speakT() {
+        const u = new SpeechSynthesisUtterance(window.getSelection().toString());
+        u.lang = 'ja-JP'; window.speechSynthesis.speak(u);
+    }
+</script>
 </body>
 
 </html>
-}
