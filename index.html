@@ -86,8 +86,7 @@
 
         /* El recuadro de análisis que pediste */
         .ocr-block::selection {
-            background: rgba(66, 133, 244, 0.25);
-            border: 1px solid #4285F4;
+            background: rgba(66, 133, 244, 0.3);
         }
 
         /* Menú Flotante de Análisis */
@@ -102,6 +101,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             gap: 10px;
             align-items: center;
+            white-space: nowrap; /* Evita que los botones se envuelvan */
         }
 
         #lens-action-menu button {
@@ -147,10 +147,10 @@
 <div id="ocr-bar"></div>
 
 <div id="lens-action-menu">
-    <button onclick="copyLensText()">Copiar</button>
-    <button onclick="translateDeepL()">DeepL</button>
-    <button onclick="speakJapanese()">Voz</button>
-    <button onclick="googleSearch()">Buscar</button>
+    <button id="btn-copy">Copiar</button>
+    <button id="btn-translate">DeepL</button>
+    <button id="btn-speak">Voz</button>
+    <button id="btn-search">Buscar</button>
 </div>
 
 <div id="reader-viewport">
@@ -161,122 +161,17 @@
 </div>
 
 <div class="bottom-nav">
-    <button class="nav-icon" onclick="changePage(-1)">‹</button>
+    <button id="btn-prev" class="nav-icon">‹</button>
     <span class="page-indicator" id="page-info">0 / 0</span>
-    <button class="nav-icon" onclick="changePage(1)">›</button>
-    <button class="nav-icon" onclick="document.getElementById('pdf-upload').click()">📁</button>
-    <button class="nav-icon" onclick="toggleDark()">🌓</button>
+    <button id="btn-next" class="nav-icon">›</button>
+    <button id="btn-open" class="nav-icon">📁</button>
+    <button id="btn-dark-toggle" class="nav-icon">🌓</button>
     <input type="file" id="pdf-upload" style="display:none" accept="application/pdf">
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
-
-<script>
-    let pdfDoc = null, pageNum = 1;
-    const canvas = document.getElementById('main-canvas');
-    const lensLayer = document.getElementById('lens-layer');
-    const ocrBar = document.getElementById('ocr-bar');
-    const menu = document.getElementById('lens-action-menu');
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-    // Lógica de Selección tipo Lens
-    document.addEventListener('selectionchange', () => {
-        const sel = window.getSelection();
-        const text = sel.toString().trim();
-        if (text.length > 0) {
-            const rect = sel.getRangeAt(0).getBoundingClientRect();
-            menu.style.display = 'flex';
-            menu.style.top = `${rect.top - 60}px`;
-            menu.style.left = `${Math.max(10, rect.left)}px`;
-            navigator.clipboard.writeText(text); // Copiado automático
-        } else {
-            menu.style.display = 'none';
-        }
-    });
-
-    // Carga de Archivos
-    document.getElementById('pdf-upload').onchange = e => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function () {
-            const data = new Uint8Array(this.result);
-            pdfjsLib.getDocument(data).promise.then(pdf => {
-                pdfDoc = pdf;
-                renderPage(1);
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    };
-
-    async function renderPage(num) {
-        if (!pdfDoc) return;
-        pageNum = num;
-        const page = await pdfDoc.getPage(num);
-        const viewport = page.getViewport({ scale: 2 }); // Alta calidad para OCR
-        canvas.height = viewport.height; canvas.width = viewport.width;
-
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
-        document.getElementById('page-info').innerText = `${num} / ${pdfDoc.numPages}`;
-
-        // Iniciar Lens en segundo plano
-        runLensOCR();
-    }
-
-    // Función Lens: Analiza sin molestar
-    async function runLensOCR() {
-        lensLayer.innerHTML = '';
-        ocrBar.style.opacity = '1';
-        ocrBar.style.width = '10%';
-
-        const result = await Tesseract.recognize(canvas, 'jpn', {
-            logger: m => {
-                if (m.status === 'recognizing text') ocrBar.style.width = `${10 + (m.progress * 90)}%`;
-            }
-        });
-
-        result.data.lines.forEach(line => {
-            const span = document.createElement('span');
-            span.className = 'ocr-block';
-            const b = line.bbox;
-            span.style.left = `${b.x0}px`; span.style.top = `${b.y0}px`;
-            span.style.width = `${b.x1 - b.x0}px`; span.style.height = `${b.y1 - b.y0}px`;
-            span.style.fontSize = `${b.y1 - b.y0}px`;
-            span.innerText = line.text;
-            lensLayer.appendChild(span);
-        });
-
-        ocrBar.style.width = '100%';
-        setTimeout(() => { ocrBar.style.opacity = '0'; ocrBar.style.width = '0%'; }, 600);
-    }
-
-    // Acciones del Menú
-    function copyLensText() { window.getSelection().removeAllRanges(); }
-    function translateDeepL() {
-        const text = window.getSelection().toString();
-        window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(text)}`, '_blank');
-    }
-    function googleSearch() {
-        const text = window.getSelection().toString();
-        window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, '_blank');
-    }
-    function speakJapanese() {
-        const msg = new SpeechSynthesisUtterance(window.getSelection().toString());
-        msg.lang = 'ja-JP'; window.speechSynthesis.speak(msg);
-    }
-
-    // Navegación Kindle
-    function changePage(delta) {
-        const next = pageNum + delta;
-        if (next > 0 && next <= pdfDoc.numPages) renderPage(next);
-    }
-
-    function toggleDark() {
-        document.body.classList.toggle('dark-mode');
-        canvas.style.filter = document.body.classList.contains('dark-mode') ? "invert(1) hue-rotate(180deg)" : "none";
-    }
-</script>
+<script src="script.js" defer></script>
 </body>
 
 </html>

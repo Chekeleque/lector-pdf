@@ -3,94 +3,79 @@ let pdfDoc = null;
 let pageNum = 1;
 
 // DOM Elements
-const canvas = document.getElementById('pdf-canvas');
-const ctx = canvas.getContext('2d');
-const textLayer = document.getElementById('text-layer');
-const loadingOverlay = document.getElementById('loading-overlay');
-const toast = document.getElementById('toast');
-const pageNumDisplay = document.getElementById('page-num');
-const fileInput = document.getElementById('file-input');
+const canvas = document.getElementById('main-canvas');
+const lensLayer = document.getElementById('lens-layer');
+const ocrBar = document.getElementById('ocr-bar');
+const menu = document.getElementById('lens-action-menu');
+const pageInfo = document.getElementById('page-info');
+const fileInput = document.getElementById('pdf-upload');
 
 // PDF.js worker configuration
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-/**
- * Shows a toast notification message.
- * @param {string} message The message to display.
- */
-function showToast(message) {
-    toast.innerText = message;
-    toast.style.display = 'block';
-    setTimeout(() => {
-        toast.style.display = 'none';
-    }, 2000);
-}
 
 /**
  * Renders a specific page of the PDF onto the canvas and runs OCR.
  * @param {number} num The page number to render.
  */
 async function renderPage(num) {
-    if (!pdfDoc) {
-        return;
-    }
-    // Ensure page number is within bounds
-    pageNum = Math.max(1, Math.min(num, pdfDoc.numPages));
+    if (!pdfDoc) return;
+    pageNum = num;
 
     const page = await pdfDoc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 1.5 });
+    const viewport = page.getViewport({ scale: 2 }); // High quality for OCR
 
-    // Set canvas and text layer dimensions
     canvas.height = viewport.height;
     canvas.width = viewport.width;
-    textLayer.style.height = `${viewport.height}px`;
-    textLayer.style.width = `${viewport.width}px`;
+    lensLayer.style.height = `${viewport.height}px`;
+    lensLayer.style.width = `${viewport.width}px`;
 
-    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
 
-    pageNumDisplay.innerText = `${pageNum} / ${pdfDoc.numPages}`;
+    pageInfo.innerText = `${pageNum} / ${pdfDoc.numPages}`;
 
-    // Clear previous OCR results and run new OCR
-    textLayer.innerHTML = '';
-    runOCR();
+    // Run OCR in the background
+    runLensOCR();
 }
 
 /**
  * Runs Japanese OCR on the current canvas content and overlays the text.
  */
-async function runOCR() {
-    loadingOverlay.style.display = 'block';
+async function runLensOCR() {
+    lensLayer.innerHTML = '';
+    ocrBar.style.opacity = '1';
+    ocrBar.style.width = '10%';
+
     try {
         const result = await Tesseract.recognize(canvas, 'jpn', {
-            logger: m => console.log(m) // Optional: for debugging OCR progress
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    ocrBar.style.width = `${10 + (m.progress * 90)}%`;
+                }
+            }
         });
 
-        textLayer.innerHTML = ''; // Clear again to be safe
-
-        // Create and position text spans based on OCR data
         result.data.lines.forEach(line => {
             const span = document.createElement('span');
+            span.className = 'ocr-block';
             const b = line.bbox;
-            
-            // Use pixels for accurate positioning within the textLayer
             span.style.left = `${b.x0}px`;
             span.style.top = `${b.y0}px`;
             span.style.width = `${b.x1 - b.x0}px`;
             span.style.height = `${b.y1 - b.y0}px`;
-            
-            // Font size based on bounding box height is a good approximation
             span.style.fontSize = `${b.y1 - b.y0}px`;
-            span.style.lineHeight = '1'; // Important for vertical alignment
-
             span.innerText = line.text;
-            textLayer.appendChild(span);
+            lensLayer.appendChild(span);
         });
-
     } catch (error) {
         console.error("OCR failed:", error);
-        showToast("Error durante el OCR.");
+        // Aquí se podría mostrar una notificación al usuario
     } finally {
-        loadingOverlay.style.display = 'none';
+        ocrBar.style.width = '100%';
+        setTimeout(() => {
+            ocrBar.style.opacity = '0';
+            // Resetea el ancho después de la transición para la próxima vez
+            setTimeout(() => { ocrBar.style.width = '0%'; }, 500);
+        }, 600);
     }
 }
 
@@ -100,76 +85,125 @@ async function runOCR() {
  */
 function handleFileSelect(e) {
     const file = e.target.files[0];
-    if (!file) {
-        return;
-    }
+    if (!file) return;
+
     const reader = new FileReader();
     reader.onload = function() {
         const data = new Uint8Array(this.result);
         pdfjsLib.getDocument(data).promise.then(pdf => {
             pdfDoc = pdf;
-            renderPage(1); // Start with the first page
+            pageNum = 1; // Resetea a la primera página
+            renderPage(pageNum);
         });
     };
     reader.readAsArrayBuffer(file);
 }
 
-// --- Event Listeners ---
-
-// 1. File and Navigation Controls
-document.getElementById('btn-open').addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', handleFileSelect);
-
-document.getElementById('prev').addEventListener('click', () => {
-    if (pdfDoc && pageNum > 1) {
-        renderPage(--pageNum);
+/**
+ * Changes the current page.
+ * @param {number} delta The change in page number (-1 for prev, 1 for next).
+ */
+function changePage(delta) {
+    if (!pdfDoc) return; // Cláusula de guarda para evitar errores
+    const newPageNum = pageNum + delta;
+    if (newPageNum > 0 && newPageNum <= pdfDoc.numPages) {
+        renderPage(newPageNum);
     }
-});
+}
 
-document.getElementById('next').addEventListener('click', () => {
-    if (pdfDoc && pageNum < pdfDoc.numPages) {
-        renderPage(++pageNum);
-    }
-});
+/**
+ * Toggles dark mode.
+ */
+function toggleDark() {
+    const isDarkMode = document.body.classList.toggle('dark-mode');
+    canvas.style.filter = isDarkMode ? "invert(1) hue-rotate(180deg)" : "none";
+}
 
-// 2. Action Buttons (Translate, Listen)
-document.getElementById('btn-translate').addEventListener('click', () => {
-    const text = window.getSelection().toString().trim();
+// --- Funciones del Menú de Acción ---
+
+function getSelectedText() {
+    return window.getSelection().toString().trim();
+}
+
+function copyLensText() {
+    const text = getSelectedText();
     if (text) {
-        const url = `https://www.deepl.com/translator#ja/es/${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    } else {
-        showToast("Selecciona texto primero");
-    }
-});
-
-document.getElementById('btn-listen').addEventListener('click', () => {
-    const text = window.getSelection().toString().trim();
-    if (text) {
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'ja-JP';
-        window.speechSynthesis.speak(msg);
-    } else {
-        showToast("Selecciona texto primero");
-    }
-});
-
-// 3. Auto-copy on selection
-document.addEventListener('selectionchange', () => {
-    const selection = window.getSelection().toString().trim();
-    if (selection.length > 0) {
-        navigator.clipboard.writeText(selection).then(() => {
-            console.log("Copiado al portapapeles:", selection);
-            // Opcional: showToast("Texto copiado");
+        navigator.clipboard.writeText(text).then(() => {
+            console.log("Texto copiado.");
+            // Opcional: mostrar una notificación de "copiado"
         }).catch(err => {
             console.error("No se pudo copiar el texto: ", err);
         });
     }
-});
+    window.getSelection().removeAllRanges(); // Deseleccionar texto
+    menu.style.display = 'none'; // Ocultar menú
+}
 
-// 4. Dark Mode Toggle
-document.getElementById('dark-switch').addEventListener('change', e => {
-    document.body.classList.toggle('dark-mode', e.target.checked);
-    // This filter is a simple but effective way to invert PDF colors for dark mode.
-    canvas.style.filter = e.target.checked ? "invert(1) hue-rotate(180deg)" : "none";
+function translateDeepL() {
+    const text = getSelectedText();
+    if (text) {
+        // Usar ja/es específicamente ya que el OCR es para japonés
+        window.open(`https://www.deepl.com/translator#ja/es/${encodeURIComponent(text)}`, '_blank');
+    }
+}
+
+function googleSearch() {
+    const text = getSelectedText();
+    if (text) {
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, '_blank');
+    }
+}
+
+function speakJapanese() {
+    const text = getSelectedText();
+    if (text) {
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'ja-JP';
+        window.speechSynthesis.speak(msg);
+    }
+}
+
+// --- Configuración de Event Listeners ---
+
+// 1. File and Navigation Controls
+document.getElementById('btn-open').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', handleFileSelect);
+document.getElementById('btn-prev').addEventListener('click', () => changePage(-1));
+document.getElementById('btn-next').addEventListener('click', () => changePage(1));
+document.getElementById('btn-dark-toggle').addEventListener('click', toggleDark);
+
+// 2. Action Menu Buttons
+document.getElementById('btn-copy').addEventListener('click', copyLensText);
+document.getElementById('btn-translate').addEventListener('click', translateDeepL);
+document.getElementById('btn-speak').addEventListener('click', speakJapanese);
+document.getElementById('btn-search').addEventListener('click', googleSearch);
+
+// 3. Muestra/Oculta el menú de acción al seleccionar texto
+document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    const text = sel.toString().trim();
+
+    if (text.length > 0 && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        // Asegurarse de que la selección está dentro de nuestra capa de texto
+        if (lensLayer.contains(range.commonAncestorContainer)) {
+            const rect = range.getBoundingClientRect();
+            const menuHeight = 50; // Altura aproximada del menú para posicionarlo
+
+            menu.style.display = 'flex';
+
+            // Posicionar el menú arriba, pero cambiarlo abajo si no hay espacio
+            if (rect.top < menuHeight) {
+                menu.style.top = `${rect.bottom + 10}px`;
+            } else {
+                menu.style.top = `${rect.top - menuHeight}px`;
+            }
+
+            // Centrar el menú horizontalmente sobre la selección
+            const menuLeft = rect.left + (rect.width / 2) - (menu.offsetWidth / 2);
+            menu.style.left = `${Math.max(10, menuLeft)}px`; // Evitar que se salga por la izquierda
+        }
+    } else {
+        menu.style.display = 'none';
+    }
 });
