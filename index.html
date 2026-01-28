@@ -4,17 +4,17 @@
 <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>Kindle Lens Reader</title>
+        <title>Kindle Lens Reader v4</title>
         <style>
                 :root {
                         --primary: #4285F4;
-                        --bg: #121212;
-                        --panel: #1e1e1e;
-                        --text: #e0e0e0;
+                        --bg: #000000;
+                        --panel: #1a1a1a;
+                        --text: #f0f0f0;
                 }
 
                 body {
-                        font-family: 'Segoe UI', Roboto, sans-serif;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                         background: var(--bg);
                         color: var(--text);
                         margin: 0;
@@ -24,53 +24,44 @@
                         overflow: hidden;
                 }
 
-                /* BARRA SUPERIOR: Centrada y elegante */
+                /* BARRA SUPERIOR */
                 .header {
                         height: 60px;
                         background: var(--panel);
-                        display: grid;
-                        grid-template-columns: 100px 1fr 100px;
+                        display: flex;
+                        justify-content: space-between;
                         align-items: center;
                         padding: 0 15px;
                         border-bottom: 1px solid #333;
                         z-index: 100;
+                        transition: transform 0.3s;
                 }
 
-                .btn-open {
-                        background: var(--primary);
-                        color: white;
-                        border: none;
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        font-weight: bold;
-                        font-size: 0.8rem;
-                        cursor: pointer;
+                .header.fullscreen-hide {
+                        transform: translateY(-100%);
                 }
 
-                #page-center-display {
-                        text-align: center;
+                #page-center {
                         font-weight: bold;
                         color: var(--primary);
-                        font-size: 1rem;
                         letter-spacing: 1px;
+                        font-size: 0.9rem;
                 }
 
-                /* ÁREA DE LECTURA */
+                /* VISOR PRINCIPAL */
                 #viewer-container {
                         flex: 1;
                         overflow: auto;
                         display: flex;
                         justify-content: center;
-                        padding: 20px 10px;
-                        background: #2b2b2b;
-                        /* Fondo neutro para resaltar el papel */
+                        align-items: flex-start;
+                        padding: 10px;
+                        background: #121212;
                 }
 
                 #canvas-box {
                         position: relative;
-                        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
-                        background: white;
-                        border-radius: 2px;
+                        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
                 }
 
                 canvas {
@@ -79,81 +70,97 @@
                         height: auto;
                 }
 
-                /* BOTÓN FLOTANTE LENS */
-                #lens-btn {
+                /* BOTONES FLOTANTES */
+                .floating-controls {
                         position: fixed;
-                        bottom: 90px;
-                        right: 25px;
-                        width: 65px;
-                        height: 65px;
-                        background: white;
+                        bottom: 100px;
+                        right: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 15px;
+                        z-index: 200;
+                }
+
+                .circle-btn {
+                        width: 55px;
+                        height: 55px;
                         border-radius: 50%;
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-                        z-index: 200;
-                        border: 4px solid var(--primary);
+                        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+                        border: none;
                         cursor: pointer;
-                        transition: transform 0.2s;
                 }
 
-                #lens-btn:active {
-                        transform: scale(0.9);
+                #lens-btn {
+                        background: white;
+                        border: 3px solid var(--primary);
                 }
 
-                /* BARRA DE NAVEGACIÓN INFERIOR */
+                #fs-btn {
+                        background: var(--panel);
+                        color: white;
+                        border: 2px solid #444;
+                        font-size: 1.2rem;
+                }
+
+                /* BARRA INFERIOR */
                 .footer {
-                        height: 75px;
+                        height: 70px;
                         background: var(--panel);
                         display: flex;
                         justify-content: space-around;
                         align-items: center;
                         border-top: 1px solid #333;
+                        transition: transform 0.3s;
                 }
 
-                .nav-button {
-                        background: transparent;
-                        border: 2px solid #444;
+                .footer.fullscreen-hide {
+                        transform: translateY(100%);
+                }
+
+                .nav-btn {
+                        background: #2a2a2a;
+                        border: none;
                         color: white;
-                        padding: 10px 30px;
-                        border-radius: 25px;
+                        padding: 10px 25px;
+                        border-radius: 12px;
                         font-size: 1rem;
                         font-weight: bold;
                         cursor: pointer;
-                        transition: 0.3s;
-                }
-
-                .nav-button:active {
-                        background: #333;
-                        border-color: var(--primary);
                 }
         </style>
 </head>
 
-<body>
+<body id="main-body">
 
-        <div class="header">
-                <button class="btn-open" onclick="document.getElementById('file-in').click()">📁 ABRIR</button>
-                <div id="page-center-display">PÁGINA 0 / 0</div>
-                <div style="text-align: right;">
-                        <input type="file" id="file-in" style="display:none" accept="application/pdf">
-                </div>
+        <div class="header" id="header">
+                <button onclick="document.getElementById('file-in').click()"
+                        style="background:var(--primary); border:none; color:white; padding:8px 15px; border-radius:8px; font-weight:bold;">📁
+                        ABRIR</button>
+                <div id="page-center">PÁGINA 0 / 0</div>
+                <input type="file" id="file-in" style="display:none" accept="application/pdf">
+                <div style="width: 50px;"></div>
         </div>
 
-        <div id="lens-btn" onclick="captureToLens()">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/f/f7/Google_Lens_2021_logo.svg" width="38">
+        <div class="floating-controls">
+                <button id="fs-btn" class="circle-btn" onclick="toggleFullScreen()" title="Pantalla Completa">⛶</button>
+                <button id="lens-btn" class="circle-btn" onclick="captureToLens()">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/f/f7/Google_Lens_2021_logo.svg"
+                                width="30">
+                </button>
         </div>
 
-        <div id="viewer-container">
+        <div id="viewer-container" onclick="handleViewClick()">
                 <div id="canvas-box">
                         <canvas id="pdf-render"></canvas>
                 </div>
         </div>
 
-        <div class="footer">
-                <button class="nav-button" onclick="movePage(-1)">ANTERIOR</button>
-                <button class="nav-button" onclick="movePage(1)">SIGUIENTE</button>
+        <div class="footer" id="footer">
+                <button class="nav-btn" onclick="movePage(-1)">ANTERIOR</button>
+                <button class="nav-btn" onclick="movePage(1)">SIGUIENTE</button>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -165,14 +172,11 @@
 
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-                // Manejador de Archivos
                 document.getElementById('file-in').onchange = e => {
                         const file = e.target.files[0];
-                        if (!file) return;
                         const reader = new FileReader();
                         reader.onload = function () {
-                                const data = new Uint8Array(this.result);
-                                pdfjsLib.getDocument(data).promise.then(pdf => {
+                                pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(pdf => {
                                         pdfDoc = pdf;
                                         render(1);
                                 });
@@ -184,18 +188,12 @@
                         if (isRendering || !pdfDoc) return;
                         isRendering = true;
                         pageNum = num;
-
                         const page = await pdfDoc.getPage(num);
-                        const viewport = page.getViewport({ scale: 1.8 }); // Zoom optimizado para lectura
-
+                        const viewport = page.getViewport({ scale: 2.0 }); // Calidad Retina
                         canvas.height = viewport.height;
                         canvas.width = viewport.width;
-
                         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-                        // Actualizar contador central
-                        document.getElementById('page-center-display').innerText = `PÁGINA ${num} / ${pdfDoc.numPages}`;
-
+                        document.getElementById('page-center').innerText = `PÁGINA ${num} / ${pdfDoc.numPages}`;
                         isRendering = false;
                 }
 
@@ -204,34 +202,54 @@
                         if (next > 0 && next <= pdfDoc.numPages) render(next);
                 }
 
-                // Función Integrada para Google Lens
-                function captureToLens() {
-                        if (!pdfDoc) return;
+                // --- FUNCIONES NUEVAS ---
 
-                        const imageData = canvas.toDataURL("image/jpeg", 0.9);
-                        const blob = dataURLtoBlob(imageData);
-                        const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+                // Pantalla Completa Real
+                function toggleFullScreen() {
+                        if (!document.fullscreenElement) {
 
-                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                                navigator.share({
-                                        files: [file],
-                                        title: 'Lens Scan',
-                                }).catch(e => console.log("Share failed", e));
+                                document.documentElement.requestFullscreen();
+                                hideUI();
                         } else {
-                                // Fallback: Descarga rápida para que el usuario la abra en Lens manualmente
-                                const link = document.createElement('a');
-                                link.download = 'scan_to_lens.jpg';
-                                link.href = imageData;
-                                link.click();
-                                alert("Imagen guardada. Ábrela con Google Lens.");
+                                if (document.exitFullscreen) {
+                                        document.exitFullscreen();
+                                        showUI();
+                                }
                         }
                 }
 
-                function dataURLtoBlob(dataurl) {
-                        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-                        while (n--) u8arr[n] = bstr.charCodeAt(n);
-                        return new Blob([u8arr], { type: mime });
+                // Ocultar/Mostrar barras al tocar el centro (Kindle Style)
+                function handleViewClick() {
+                        const header = document.getElementById('header');
+                        header.classList.toggle('fullscreen-hide');
+                        document.getElementById('footer').classList.toggle('fullscreen-hide');
+                }
+
+                function hideUI() {
+                        document.getElementById('header').classList.add('fullscreen-hide');
+                        document.getElementById('footer').classList.add('fullscreen-hide');
+                }
+
+                function showUI() {
+                        document.getElementById('header').classList.remove('fullscreen-hide');
+                        document.getElementById('footer').classList.remove('fullscreen-hide');
+                }
+
+                // Google Lens Integration
+                function captureToLens() {
+                        if (!pdfDoc) return;
+                        const imageData = canvas.toDataURL("image/jpeg", 0.9);
+                        fetch(imageData).then(res => res.blob()).then(blob => {
+                                const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+                                if (navigator.share) {
+                                        navigator.share({ files: [file], title: 'Google Lens Scan' });
+                                } else {
+                                        const link = document.createElement('a');
+                                        link.download = 'lens_scan.jpg';
+                                        link.href = imageData;
+                                        link.click();
+                                }
+                        });
                 }
         </script>
 </body>
