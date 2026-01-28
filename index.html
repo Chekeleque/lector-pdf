@@ -4,17 +4,19 @@
 <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>Lector Lens Pro - v3</title>
+        <title>Kindle Lens Reader</title>
         <style>
                 :root {
-                        --accent: #4285F4;
+                        --primary: #4285F4;
                         --bg: #121212;
-                        --panel: #2d2e31;
+                        --panel: #1e1e1e;
+                        --text: #e0e0e0;
                 }
 
                 body {
-                        font-family: sans-serif;
+                        font-family: 'Segoe UI', Roboto, sans-serif;
                         background: var(--bg);
+                        color: var(--text);
                         margin: 0;
                         height: 100vh;
                         display: flex;
@@ -22,41 +24,53 @@
                         overflow: hidden;
                 }
 
-                /* BARRA SUPERIOR FIJA: Para asegurar que los botones siempre se vean */
-                .top-nav {
-                        height: 65px;
+                /* BARRA SUPERIOR: Centrada y elegante */
+                .header {
+                        height: 60px;
                         background: var(--panel);
-                        display: flex;
-                        justify-content: space-around;
+                        display: grid;
+                        grid-template-columns: 100px 1fr 100px;
                         align-items: center;
-                        border-bottom: 2px solid var(--accent);
-                        z-index: 5000;
+                        padding: 0 15px;
+                        border-bottom: 1px solid #333;
+                        z-index: 100;
                 }
 
-                .action-btn {
-                        background: var(--accent);
+                .btn-open {
+                        background: var(--primary);
                         color: white;
                         border: none;
-                        padding: 10px 15px;
-                        border-radius: 8px;
+                        padding: 8px 12px;
+                        border-radius: 6px;
                         font-weight: bold;
-                        font-size: 0.9rem;
-                        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+                        font-size: 0.8rem;
+                        cursor: pointer;
                 }
 
-                /* ÁREA DEL PDF */
-                #viewer-area {
+                #page-center-display {
+                        text-align: center;
+                        font-weight: bold;
+                        color: var(--primary);
+                        font-size: 1rem;
+                        letter-spacing: 1px;
+                }
+
+                /* ÁREA DE LECTURA */
+                #viewer-container {
                         flex: 1;
                         overflow: auto;
                         display: flex;
                         justify-content: center;
-                        padding: 15px;
+                        padding: 20px 10px;
+                        background: #2b2b2b;
+                        /* Fondo neutro para resaltar el papel */
                 }
 
-                #wrapper {
+                #canvas-box {
                         position: relative;
+                        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
                         background: white;
-                        border: 3px solid #444;
+                        border-radius: 2px;
                 }
 
                 canvas {
@@ -65,159 +79,160 @@
                         height: auto;
                 }
 
-                /* CAPA LENS */
-                #lens-overlay {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        z-index: 10;
-                        cursor: text;
-                }
-
-                .lens-box {
-                        position: absolute;
-                        color: transparent;
-                        user-select: text;
-                        -webkit-user-select: text;
-                }
-
-                .lens-box::selection {
-                        background: rgba(66, 133, 244, 0.4);
-                }
-
-                /* MENÚ DE ACCIÓN (FLOTANTE) */
-                #pop-menu {
+                /* BOTÓN FLOTANTE LENS */
+                #lens-btn {
                         position: fixed;
-                        display: none;
-                        background: #ffffff;
-                        color: #000;
-                        padding: 12px;
-                        border-radius: 12px;
-                        z-index: 9000;
-                        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
-                        gap: 10px;
-                }
-
-                #pop-menu button {
-                        border: none;
-                        background: #f1f3f4;
-                        padding: 8px;
-                        font-weight: bold;
-                        border-radius: 4px;
-                }
-
-                /* BARRA DE PÁGINAS INFERIOR */
-                .bottom-nav {
-                        height: 55px;
-                        background: var(--panel);
+                        bottom: 90px;
+                        right: 25px;
+                        width: 65px;
+                        height: 65px;
+                        background: white;
+                        border-radius: 50%;
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        gap: 20px;
+                        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+                        z-index: 200;
+                        border: 4px solid var(--primary);
+                        cursor: pointer;
+                        transition: transform 0.2s;
                 }
 
-                .page-btn {
-                        background: none;
-                        border: 1px solid #777;
+                #lens-btn:active {
+                        transform: scale(0.9);
+                }
+
+                /* BARRA DE NAVEGACIÓN INFERIOR */
+                .footer {
+                        height: 75px;
+                        background: var(--panel);
+                        display: flex;
+                        justify-content: space-around;
+                        align-items: center;
+                        border-top: 1px solid #333;
+                }
+
+                .nav-button {
+                        background: transparent;
+                        border: 2px solid #444;
                         color: white;
-                        padding: 5px 20px;
-                        border-radius: 20px;
-                        font-size: 1.2rem;
+                        padding: 10px 30px;
+                        border-radius: 25px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: 0.3s;
+                }
+
+                .nav-button:active {
+                        background: #333;
+                        border-color: var(--primary);
                 }
         </style>
 </head>
 
 <body>
 
-        <div class="top-nav">
-                <button class="action-btn" onclick="document.getElementById('in').click()">ABRIR PDF 📁</button>
-                <input type="file" id="in" style="display:none" accept="application/pdf">
-                <span id="p-info" style="color:white; font-weight:bold;">0 / 0</span>
-                <button class="action-btn" onclick="toggleDark()">MODO 🌓</button>
-        </div>
-
-        <div id="pop-menu">
-                <button onclick="copy()">Copiar</button>
-                <button onclick="translate()">DeepL</button>
-                <button onclick="speak()">Escuchar</button>
-        </div>
-
-        <div id="viewer-area">
-                <div id="wrapper">
-                        <canvas id="c"></canvas>
-                        <div id="lens-overlay"></div>
+        <div class="header">
+                <button class="btn-open" onclick="document.getElementById('file-in').click()">📁 ABRIR</button>
+                <div id="page-center-display">PÁGINA 0 / 0</div>
+                <div style="text-align: right;">
+                        <input type="file" id="file-in" style="display:none" accept="application/pdf">
                 </div>
         </div>
 
-        <div class="bottom-nav">
-                <button class="page-btn" onclick="move(-1)">‹ Ant</button>
-                <button class="page-btn" onclick="move(1)">Sig ›</button>
+        <div id="lens-btn" onclick="captureToLens()">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/f/f7/Google_Lens_2021_logo.svg" width="38">
+        </div>
+
+        <div id="viewer-container">
+                <div id="canvas-box">
+                        <canvas id="pdf-render"></canvas>
+                </div>
+        </div>
+
+        <div class="footer">
+                <button class="nav-button" onclick="movePage(-1)">ANTERIOR</button>
+                <button class="nav-button" onclick="movePage(1)">SIGUIENTE</button>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-        <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
 
         <script>
-                let doc = null, curP = 1, loading = false;
-                const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
-                const overlay = document.getElementById('lens-overlay'), menu = document.getElementById('pop-menu');
+                let pdfDoc = null, pageNum = 1, isRendering = false;
+                const canvas = document.getElementById('pdf-render');
+                const ctx = canvas.getContext('2d');
 
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-                // Menú flotante al seleccionar
-                document.addEventListener('selectionchange', () => {
-                        const s = window.getSelection();
-                        if (s.toString().trim()) {
-                                const r = s.getRangeAt(0).getBoundingClientRect();
-                                menu.style.display = 'flex';
-                                menu.style.top = (r.top - 65) + 'px';
-                                menu.style.left = Math.max(10, r.left) + 'px';
-                        } else { menu.style.display = 'none'; }
-                });
-
-                document.getElementById('in').onchange = e => {
-                        const f = e.target.files[0];
-                        const r = new FileReader();
-                        r.onload = function () {
-                                pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(p => { doc = p; render(1); });
+                // Manejador de Archivos
+                document.getElementById('file-in').onchange = e => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                                const data = new Uint8Array(this.result);
+                                pdfjsLib.getDocument(data).promise.then(pdf => {
+                                        pdfDoc = pdf;
+                                        render(1);
+                                });
                         };
-                        r.readAsArrayBuffer(f);
+                        reader.readAsArrayBuffer(file);
                 };
 
-                async function render(n) {
-                        if (loading) return; loading = true; curP = n;
-                        const p = await doc.getPage(n);
-                        const v = p.getViewport({ scale: 1.5 });
-                        cvs.height = v.height; cvs.width = v.width;
-                        await p.render({ canvasContext: ctx, viewport: v }).promise;
-                        document.getElementById('p-info').innerText = `${n} / ${doc.numPages}`;
-                        overlay.innerHTML = '';
-                        loading = false;
-                        doOCR();
+                async function render(num) {
+                        if (isRendering || !pdfDoc) return;
+                        isRendering = true;
+                        pageNum = num;
+
+
+                } const page = await pdfDoc.getPage(num);
+                const viewport = page.getViewport({ scale: 1.8 }); // Zoom optimizado para lectura
+
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                // Actualizar contador central
+                document.getElementById('page-center-display').innerText = `PÁGINA ${num} / ${pdfDoc.numPages}`;
+
+                isRendering = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+
+                function movePage(delta) {
+                        const next = pageNum + delta;
+                        if (next > 0 && next <= pdfDoc.numPages) render(next);
                 }
 
-                async function doOCR() {
-                        const res = await Tesseract.recognize(cvs, 'jpn');
-                        res.data.lines.forEach(l => {
-                                const s = document.createElement('span');
-                                s.className = 'lens-box';
-                                const b = l.bbox;
-                                s.style.left = b.x0 + 'px'; s.style.top = b.y0 + 'px';
-                                s.style.width = (b.x1 - b.x0) + 'px'; s.style.height = (b.y1 - b.y0) + 'px';
-                                s.style.fontSize = (b.y1 - b.y0) + 'px';
-                                s.innerText = l.text;
-                                overlay.appendChild(s);
-                        });
+                // Función Integrada para Google Lens
+                function captureToLens() {
+                        if (!pdfDoc) return;
+
+                        const imageData = canvas.toDataURL("image/jpeg", 0.9);
+                        const blob = dataURLtoBlob(imageData);
+                        const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                navigator.share({
+                                        files: [file],
+                                        title: 'Lens Scan',
+                                }).catch(e => console.log("Share failed", e));
+                        } else {
+                                // Fallback: Descarga rápida para que el usuario la abra en Lens manualmente
+                                const link = document.createElement('a');
+                                link.download = 'scan_to_lens.jpg';
+                                link.href = imageData;
+                                link.click();
+                                alert("Imagen guardada. Ábrela con Google Lens.");
+                        }
                 }
 
-                function move(d) { const n = curP + d; if (n > 0 && n <= doc.numPages) render(n); }
-                function copy() { navigator.clipboard.writeText(window.getSelection().toString()); }
-                function translate() { window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(window.getSelection().toString())}`); }
-                function speak() { const u = new SpeechSynthesisUtterance(window.getSelection().toString()); u.lang = 'ja-JP'; window.speechSynthesis.speak(u); }
-                function toggleDark() {
-                        document.body.style.filter = document.body.style.filter ? '' : 'invert(0.9) hue-rotate(180deg)';
+                function dataURLtoBlob(dataurl) {
+                        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+                        while (n--) u8arr[n] = bstr.charCodeAt(n);
+                        return new Blob([u8arr], { type: mime });
                 }
         </script>
 </body>
