@@ -3,41 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lector PDF con OCR Japonés</title>
+    <title>Lector PDF & OCR</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Librerías Externas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.3/tesseract.min.js"></script>
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <h1>Lector PDF & OCR</h1>
-            <div class="controls">
-                <input type="file" id="btnAbrirPdf" accept="application/pdf" />
-                <button id="btnAnterior">Anterior</button>
-                <span id="txtPagina">0 / 0</span>
-                <button id="btnSiguiente">Siguiente</button>
-                <label class="switch-label">
-                    <input type="checkbox" id="switchOscuro">
-                    Modo Oscuro
-                </label>
-            </div>
-        </header>
 
-        <main>
-            <div class="canvas-wrapper">
-                <canvas id="pdf-canvas"></canvas>
-                <!-- Menú flotante (equivalente al ActionMode de Android) -->
-                <div id="menu-flotante" class="menu-oculto">
-                    <button id="btnCopiar">Copiar</button>
-                    <button id="btnTraducir">Traducir</button>
-                    <button id="btnEscuchar">Escuchar</button>
-                </div>
-            </div>
-        </main>
+    <div class="app-bar">Lector PDF & OCR</div>
+    <div id="loading-overlay">Procesando OCR Japonés...</div>
+    <div id="toast"></div>
+
+    <div id="viewer-container">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="text-layer"></div>
     </div>
-    <script src="script.js"></script>
+
+    <div class="controls">
+        <input type="file" id="file-input" accept="application/pdf" style="display:none">
+        <button class="btn-fab" id="btn-open" title="Abrir PDF">📁</button>
+        <button class="btn-fab" id="prev" title="Página Anterior">◀</button>
+        <span class="page-info" id="page-num">0 / 0</span>
+        <button class="btn-fab" id="next" title="Página Siguiente">▶</button>
+        <button class="btn-fab" id="btn-listen" title="Escuchar Selección">🔊</button>
+        <button class="btn-fab" id="btn-translate" title="Traducir Selección">🌍</button>
+        
+        <label class="dark-mode-toggle" for="dark-switch">
+            <input type="checkbox" id="dark-switch">
+            <span class="toggle-label">Modo Oscuro</span>
+        </label>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+
+    <!-- Application Script -->
+    <script src="script.js" defer></script>
+
 </body>
 </html>
