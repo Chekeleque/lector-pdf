@@ -31,7 +31,7 @@
             flex-direction: column;
         }
 
-        /* Indicador de progreso Lens (Estilo minimalista) */
+        /* Línea de progreso Lens minimalista en el tope */
         #ocr-bar {
             position: fixed;
             top: 0;
@@ -40,23 +40,26 @@
             height: 3px;
             background: #4285F4;
             z-index: 2000;
-            transition: width 0.2s, opacity 0.5s;
+            transition: width 0.2s;
         }
 
-        /* Contenedor de Lectura (Kindle Mode) */
+        /* Contenedor de lectura con altura garantizada */
         #reader-viewport {
             flex: 1;
             overflow-y: auto;
             display: flex;
             justify-content: center;
-            padding: 20px 0;
-            scroll-behavior: smooth;
+            padding: 10px 0;
+            background: #525659;
+            /* Fondo gris tipo lector PDF */
         }
 
         #pdf-wrapper {
             position: relative;
             background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            min-height: 100px;
+            min-width: 100px;
         }
 
         canvas {
@@ -65,7 +68,7 @@
             height: auto;
         }
 
-        /* Capa de Análisis Lens */
+        /* Capa Lens */
         #lens-layer {
             position: absolute;
             top: 0;
@@ -73,7 +76,6 @@
             right: 0;
             bottom: 0;
             z-index: 10;
-            cursor: crosshair;
         }
 
         .ocr-block {
@@ -84,94 +86,183 @@
             -webkit-user-select: text;
         }
 
-        /* El recuadro de análisis que pediste */
         .ocr-block::selection {
             background: rgba(66, 133, 244, 0.3);
         }
 
-        /* Menú Flotante de Análisis */
-        #lens-action-menu {
+        /* Menú Lens */
+        #lens-menu {
             position: fixed;
             display: none;
             background: #3c4043;
             color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
+            padding: 8px 15px;
+            border-radius: 25px;
             z-index: 3000;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            gap: 10px;
-            align-items: center;
-            white-space: nowrap; /* Evita que los botones se envuelvan */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            gap: 15px;
         }
 
-        #lens-action-menu button {
+        #lens-menu button {
             background: transparent;
             color: white;
             border: none;
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            padding: 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
         }
 
-        /* Controles Inferiores Kindle */
+        /* Barra Inferior */
         .bottom-nav {
-            height: 65px;
+            height: 60px;
             background: var(--surface);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            z-index: 1000;
+            border-top: 1px solid #ccc;
         }
 
-        .nav-icon {
-            font-size: 1.4rem;
-            cursor: pointer;
+        .nav-btn {
             background: none;
             border: none;
+            font-size: 1.5rem;
             color: var(--text);
-        }
-
-        .page-indicator {
-            font-size: 0.9rem;
-            font-weight: bold;
-            opacity: 0.7;
+            padding: 10px;
         }
     </style>
 </head>
 
-<body></body>
+<body>
 
-<div id="ocr-bar"></div>
+    <div id="ocr-bar"></div>
 
-<div id="lens-action-menu">
-    <button id="btn-copy">Copiar</button>
-    <button id="btn-translate">DeepL</button>
-    <button id="btn-speak">Voz</button>
-    <button id="btn-search">Buscar</button>
-</div>
-
-<div id="reader-viewport">
-    <div id="pdf-wrapper">
-        <canvas id="main-canvas"></canvas>
-        <div id="lens-layer"></div>
+    <div id="lens-menu">
+        <button onclick="copyText()">Copiar</button>
+        <button onclick="translateText()">DeepL</button>
+        <button onclick="listenText()">Voz</button>
     </div>
-</div>
 
-<div class="bottom-nav">
-    <button id="btn-prev" class="nav-icon">‹</button>
-    <span class="page-indicator" id="page-info">0 / 0</span>
-    <button id="btn-next" class="nav-icon">›</button>
-    <button id="btn-open" class="nav-icon">📁</button>
-    <button id="btn-dark-toggle" class="nav-icon">🌓</button>
-    <input type="file" id="pdf-upload" style="display:none" accept="application/pdf">
-</div>
+    <div id="reader-viewport">
+        <div id="pdf-wrapper">
+            <canvas id="main-canvas"></canvas>
+            <div id="lens-layer"></div>
+        </div>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-<script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
-<script src="script.js" defer></script>
+    <div class="bottom-nav">
+        <button class="nav-btn" onclick="changePage(-1)">‹</button>
+        <span id="page-info" style="font-weight: bold;">0 / 0</span>
+        <button class="nav-btn" onclick="changePage(1)">›</button>
+        <button class="nav-btn" onclick="document.getElementById('file-in').click()">📁</button>
+        <input type="file" id="file-in" style="display:none" accept="application/pdf">
+        <button class="nav-btn" onclick="toggleDark()">🌓</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+
+    <script>
+        let pdfDoc = null, pageNum = 1, isRendering = false;
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const lensLayer = document.getElementById('lens-layer');
+        const ocrBar = document.getElementById('ocr-bar');
+        const menu = document.getElementById('lens-menu');
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // Gestión de Selección Lens
+        document.addEventListener('selectionchange', () => {
+            const sel = window.getSelection();
+            if (sel.toString().trim().length > 0) {
+                const rect = sel.getRangeAt(0).getBoundingClientRect();
+                menu.style.display = 'flex';
+                menu.style.top = `${rect.top - 55}px`;
+                menu.style.left = `${Math.max(10, rect.left)}px`;
+            } else { menu.style.display = 'none'; }
+        });
+
+        // Carga de PDF
+        document.getElementById('file-in').onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                const data = new Uint8Array(this.result);
+                pdfjsLib.getDocument({ data: data }).promise.then(pdf => {
+                    pdfDoc = pdf;
+                    renderPage(1);
+                }).catch(err => alert("Error al cargar PDF: " + err.message));
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        async function renderPage(num) {
+            if (isRendering || !pdfDoc) return;
+            isRendering = true;
+            pageNum = num;
+
+            const page = await pdfDoc.getPage(num);
+            const viewport = page.getViewport({ scale: 2 }); // Escala 2 para mejor lectura y OCR
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            document.getElementById('page-info').innerText = `${num} / ${pdfDoc.numPages}`;
+
+            isRendering = false;
+            runLensOCR(); // OCR en segundo plano sin bloquear
+        }
+
+        async function runLensOCR() {
+            lensLayer.innerHTML = '';
+            ocrBar.style.width = '10%';
+
+            const result = await Tesseract.recognize(canvas, 'jpn', {
+                logger: m => { if (m.status === 'recognizing text') ocrBar.style.width = `${10 + (m.progress * 90)}%`; }
+            });
+
+            result.data.lines.forEach(line => {
+                const span = document.createElement('span');
+                span.className = 'ocr-block';
+                const b = line.bbox;
+                span.style.left = `${b.x0}px`; span.style.top = `${b.y0}px`;
+                span.style.width = `${b.x1 - b.x0}px`; span.style.height = `${b.y1 - b.y0}px`;
+                span.style.fontSize = `${(b.y1 - b.y0) * 0.8}px`;
+                span.innerText = line.text;
+                lensLayer.appendChild(span);
+            });
+            ocrBar.style.width = '0%';
+        }
+
+        // Gestos Swipe (Deslizar)
+        let touchStartX = 0;
+        document.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX);
+        document.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 100) changePage(1);  // Swipe Izquierda -> Siguiente
+            if (touchEndX - touchStartX > 100) changePage(-1); // Swipe Derecha -> Anterior
+        });
+
+        function changePage(delta) {
+            const next = pageNum + delta;
+            if (next > 0 && next <= pdfDoc.numPages) renderPage(next);
+        }
+
+        function copyText() { document.execCommand('copy'); }
+        function translateText() {
+            window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(window.getSelection().toString())}`, '_blank');
+        }
+        function listenText() {
+            const msg = new SpeechSynthesisUtterance(window.getSelection().toString());
+            msg.lang = 'ja-JP'; window.speechSynthesis.speak(msg);
+        }
+        function toggleDark() {
+            document.body.classList.toggle('dark-mode');
+            canvas.style.filter = document.body.classList.contains('dark-mode') ? "invert(1) hue-rotate(180deg)" : "none";
+        }
+    </script>
 </body>
 
 </html>
+}
