@@ -4,50 +4,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lector Lens Pro</title>
+    <title>Lector Lite - MarcosVazques20</title>
     <style>
         :root {
-            --primary: #4285F4;
-            --bg: #1a1a1a;
+            --accent: #4285F4;
+            --dark: #202124;
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
+            font-family: sans-serif;
+            background: #333;
             margin: 0;
-            height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            height: 100vh;
+            color: white;
         }
 
-        /* Línea de carga Lens */
-        #lens-progress {
+        /* Barra de progreso sutil */
+        #status-bar {
+            height: 4px;
+            width: 0%;
+            background: var(--accent);
             position: fixed;
             top: 0;
-            left: 0;
-            width: 0%;
-            height: 3px;
-            background: #34a853;
-            z-index: 2000;
-            transition: width 0.3s;
+            z-index: 1000;
+            transition: 0.3s;
         }
 
-        /* Visor de PDF */
-        #main-viewer {
+        /* Contenedor del PDF */
+        #scroll-area {
             flex: 1;
             overflow: auto;
             display: flex;
             justify-content: center;
             align-items: flex-start;
             padding: 10px;
-            position: relative;
         }
 
-        #canvas-wrapper {
+        #canvas-container {
             position: relative;
             background: white;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
         canvas {
@@ -56,185 +54,189 @@
             height: auto;
         }
 
-        /* Capa de interacción Lens */
-        #lens-overlay {
+        /* Capa de texto Lens */
+        #text-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: 10;
-            pointer-events: all;
         }
 
-        .lens-text {
+        .word-box {
             position: absolute;
             color: transparent;
             user-select: text;
             -webkit-user-select: text;
-            pointer-events: all;
         }
 
-        /* Cuadro de análisis visual */
-        .lens-text::selection {
-            background: rgba(66, 133, 244, 0.3);
+        .word-box::selection {
+            background: rgba(66, 133, 244, 0.4);
         }
 
-        /* Menú Flotante Lens */
+        /* Menú Flotante */
         #lens-menu {
             position: fixed;
             display: none;
-            background: #3c4043;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 24px;
-            z-index: 3000;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            gap: 15px;
-            align-items: center;
+            background: #FFF;
+            color: #333;
+            padding: 10px;
+            border-radius: 12px;
+            z-index: 2000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            gap: 10px;
         }
 
         #lens-menu button {
-            background: none;
             border: none;
+            background: var(--accent);
             color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
             font-weight: bold;
-            font-size: 0.8rem;
-            cursor: pointer;
         }
 
-        /* Barra de navegación inferior */
-        .kindle-nav {
-            height: 60px;
-            background: #f1f3f4;
+        /* Controles inferiores estilo Kindle */
+        .nav-controls {
+            height: 70px;
+            background: #FFF;
             display: flex;
             justify-content: space-around;
             align-items: center;
-            border-top: 1px solid #ddd;
+            padding: 0 10px;
         }
 
-        .nav-icon {
-            font-size: 1.5rem;
+        .nav-controls button {
             background: none;
             border: none;
-            color: #5f6368;
-            cursor: pointer;
+            font-size: 1.5rem;
+            color: #555;
+            padding: 10px;
+        }
+
+        #page-label {
+            color: #555;
+            font-weight: bold;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 
-<body></body>
+<body>
 
-<div id="lens-progress"></div>
+    <div id="status-bar"></div>
 
-<div id="lens-menu">
-    <button onclick="copyL()">COPIAR</button>
-    <button onclick="transL()">DEEPL</button>
-    <button onclick="voiceL()">VOZ</button>
-</div>
-
-<div id="main-viewer">
-    <div id="canvas-wrapper">
-        <canvas id="pdf-canvas"></canvas>
-        <div id="lens-overlay"></div>
+    <div id="lens-menu">
+        <button onclick="copyL()">Copiar</button>
+        <button onclick="deepL()">DeepL</button>
+        <button onclick="speakL()">Voz</button>
     </div>
-</div>
 
-<div class="kindle-nav">
-    <button class="nav-icon" onclick="changeP(-1)">‹</button>
-    <span id="page-counter" style="font-weight: bold; color: #5f6368;">0 / 0</span>
-    <button class="nav-icon" onclick="changeP(1)">›</button>
-    <button class="nav-icon" onclick="document.getElementById('file-in').click()">📁</button>
-    <input type="file" id="file-in" style="display:none" accept="application/pdf">
-</div>
+    <div id="scroll-area">
+        <div id="canvas-container">
+            <canvas id="pdf-canvas"></canvas>
+            <div id="text-overlay"></div>
+        </div>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-<script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
+    <div class="nav-controls">
+        <button onclick="changePage(-1)">◀</button>
+        <span id="page-label">Página: 0 / 0</span>
+        <button onclick="changePage(1)">▶</button>
+        <button onclick="document.getElementById('file-picker').click()">📁</button>
+        <input type="file" id="file-picker" style="display:none" accept="application/pdf">
+    </div>
 
-<script>
-    let pdf = null, pNum = 1, isReading = false;
-    const cvs = document.getElementById('pdf-canvas');
-    const ctx = cvs.getContext('2d');
-    const overlay = document.getElementById('lens-overlay');
-    const bar = document.getElementById('lens-progress');
-    const menu = document.getElementById('lens-menu');
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js"></script>
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    <script>
+        let pdfDoc = null, pageNum = 1, isRunning = false;
+        const canvas = document.getElementById('pdf-canvas');
+        const overlay = document.getElementById('text-overlay');
+        const menu = document.getElementById('lens-menu');
+        const bar = document.getElementById('status-bar');
 
-    // Gestión de Selección Lens
-    document.addEventListener('selectionchange', () => {
-        const sel = window.getSelection();
-        if (sel.toString().trim()) {
-            const rect = sel.getRangeAt(0).getBoundingClientRect();
-            menu.style.display = 'flex';
-            menu.style.top = `${rect.top - 60}px`;
-            menu.style.left = `${Math.max(10, rect.left)}px`;
-        } else { menu.style.display = 'none'; }
-    });
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-    // Cargar Archivo
-    document.getElementById('file-in').onchange = e => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function () {
-            const data = new Uint8Array(this.result);
-            pdfjsLib.getDocument(data).promise.then(res => { pdf = res; render(1); });
+        // Evento de selección (Aparece el menú)
+        document.addEventListener('selectionchange', () => {
+            const sel = window.getSelection();
+            if (sel.toString().trim()) {
+                const rect = sel.getRangeAt(0).getBoundingClientRect();
+                menu.style.display = 'flex';
+                menu.style.top = (rect.top - 60) + 'px';
+                menu.style.left = Math.max(10, rect.left) + 'px';
+            } else { menu.style.display = 'none'; }
+        });
+
+        // Cargar PDF
+        document.getElementById('file-picker').onchange = e => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function () {
+                pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(pdf => {
+                    pdfDoc = pdf;
+                    renderPage(1);
+                });
+            };
+            reader.readAsArrayBuffer(file);
         };
-        reader.readAsArrayBuffer(file);
-    };
 
-    async function render(n) {
-        if (isReading) return;
-        isReading = true;
-        pNum = n;
-        const page = await pdf.getPage(n);
-        const vp = page.getViewport({ scale: 2.0 }); // Calidad alta para OCR
+        async function renderPage(num) {
+            if (isRunning) return;
+            pageNum = num;
+            const page = await pdfDoc.getPage(num);
+            const viewport = page.getViewport({ scale: 1.5 }); // Escala moderada para evitar crasheos
 
-        cvs.height = vp.height;
-        cvs.width = vp.width;
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
 
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
-        document.getElementById('page-counter').innerText = `${n} / ${pdf.numPages}`;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+            document.getElementById('page-label').innerText = `${num} / ${pdfDoc.numPages}`;
 
-        isReading = false;
-        startLensOCR();
-    }
+            // Iniciar OCR automáticamente pero de forma ligera
+            runLensOCR();
+        }
 
-    async function startLensOCR() {
-        overlay.innerHTML = '';
-        bar.style.width = '15%';
+        async function runLensOCR() {
+            overlay.innerHTML = '';
+            bar.style.width = '10%';
 
-        const res = await Tesseract.recognize(cvs, 'jpn', {
-            logger: m => { if (m.status === 'recognizing text') bar.style.width = `${15 + (m.progress * 85)}%`; }
-        });
+            // Usamos Tesseract con configuración para Japonés
+            const worker = await Tesseract.createWorker('jpn');
+            const { data } = await worker.recognize(canvas);
 
-        res.data.lines.forEach(l => {
-            const s = document.createElement('span');
-            s.className = 'lens-text';
-            const b = l.bbox;
-            s.style.left = `${b.x0}px`; s.style.top = `${b.y0}px`;
-            s.style.width = `${b.x1 - b.x0}px`; s.style.height = `${b.y1 - b.y0}px`;
-            s.style.fontSize = `${b.y1 - b.y0}px`;
-            s.innerText = l.text;
-            overlay.appendChild(s);
-        });
-        bar.style.width = '0%';
-    }
+            data.lines.forEach(line => {
+                const span = document.createElement('span');
+                span.className = 'word-box';
+                const b = line.bbox;
+                span.style.left = b.x0 + 'px';
+                span.style.top = b.y0 + 'px';
+                span.style.width = (b.x1 - b.x0) + 'px';
+                span.style.height = (b.y1 - b.y0) + 'px';
+                span.style.fontSize = (b.y1 - b.y0) + 'px';
+                span.innerText = line.text;
+                overlay.appendChild(span);
+            });
 
-    function changeP(d) {
-        const next = pNum + d;
-        if (next > 0 && next <= pdf.numPages) render(next);
-    }
+            await worker.terminate();
+            bar.style.width = '0%';
+        }
 
-    // Acciones
-    function copyL() { navigator.clipboard.writeText(window.getSelection().toString()); }
-    function transL() { window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(window.getSelection().toString())}`, '_blank'); }
-    function voiceL() {
-        const u = new SpeechSynthesisUtterance(window.getSelection().toString());
-        u.lang = 'ja-JP'; window.speechSynthesis.speak(u);
-    }
-</script>
+        function changePage(d) {
+            const n = pageNum + d;
+            if (n > 0 && n <= pdfDoc.numPages) renderPage(n);
+        }
+
+        function copyL() { navigator.clipboard.writeText(window.getSelection().toString()); }
+        function deepL() { window.open(`https://www.deepl.com/translator#any/es/${encodeURIComponent(window.getSelection().toString())}`, '_blank'); }
+        function speakL() {
+            const u = new SpeechSynthesisUtterance(window.getSelection().toString());
+            u.lang = 'ja-JP'; window.speechSynthesis.speak(u);
+        }
+    </script>
 </body>
 
 </html>
-}
